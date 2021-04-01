@@ -262,30 +262,35 @@ web:
     pullPolicy: IfNotPresent
   service:
     type: LoadBalancer
-    externalPort: 80
+    externalPort: 443
     annotations: {
-      "service.beta.kubernetes.io/aws-load-balancer-internal": "true"
+      "service.beta.kubernetes.io/aws-load-balancer-internal": "true",
+      "service.beta.kubernetes.io/aws-load-balancer-ssl-cert": "arn:aws:iam::818130157321:server-certificate/calculi-wildcard-20210921",
+      "external-dns.alpha.kubernetes.io/hostname": "aqua.calculi.io"
     }
     ports:
-      - name: aqua-web
-        port: 8080
-        targetPort: 8080
-        nodePort:
-        protocol: TCP
+      # - name: aqua-web
+      #   port: 8080
+      #   targetPort: 8080
+      #   nodePort:
+      #   protocol: TCP
       - name: aqua-web-ssl
         port: 443
-        targetPort: 8443
+        targetPort: 8080
         nodePort:
         protocol: TCP
   ingress:
     enabled: true
     externalPort:
     annotations: {
-      "kubernetes.io/ingress.class": "alb"
+      "kubernetes.io/ingress.class": "alb",
+      "alb.ingress.kubernetes.io/certificate-arn": "arn:aws:iam::818130157321:server-certificate/calculi-wildcard-20210921"
     }
     #  kubernetes.io/ingress.class: nginx
     hosts: #REQUIRED
-    - c0xr1u0k-calculi-aquasec-test.calculi.io
+    - aqua.calculi.io
+    hostedZone: calculi.io
+    dnsZoneType: public
     #- aquasec-test.example.com
     tls: []
     #  - secretName: aquasec-tls

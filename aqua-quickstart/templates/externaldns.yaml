@@ -1,0 +1,93 @@
+{{- if .Values.web.ingress.enabled -}}
+{{- $fullname := .Release.Name -}}
+{{- $servicePort := .Values.web.service.externalPort -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Release.Namespace }}-dns-sa
+  labels:
+    app: {{ .Release.Name }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Release.Namespace }}-dns-clusterrole
+  labels:
+    app: {{ .Release.Name }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+rules:
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get","watch","list"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get","watch","list"]
+- apiGroups: ["extensions"]
+  resources: ["ingresses"]
+  verbs: ["get","watch","list"]
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Release.Namespace }}-dns-rolebinding
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Release.Namespace }}-dns-clusterrole
+subjects:
+- kind: ServiceAccount
+  name: {{ .Release.Namespace }}-dns-sa
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Namespace }}-dns
+  labels:
+    app: {{ .Release.Name }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+        chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+        release: "{{ .Release.Name }}"
+        heritage: "{{ .Release.Service }}"
+    spec:
+      serviceAccountName: {{ .Release.Namespace }}-dns-sa
+      containers:
+      - name: {{ .Release.Namespace }}-dns
+        image: bitnami/external-dns:0.7.1
+        args:
+        - --source=service
+        - --domain-filter={{.Values.web.ingress.hostedZone}} # will make ExternalDNS see only the hosted zones matching provided domain, omit to process all available hosted zones
+        - --provider=aws
+        - --policy=upsert-only # would prevent ExternalDNS from deleting any records, omit to enable full synchronization
+        - --aws-zone-type={{.Values.web.ingress.dnsZoneType}} # only look at public hosted zones (valid values are public, private or no value for both)
+        - --registry=txt
+        - --txt-owner-id=my-identifier
+        - --log-level=debug
+        - --namespace={{ .Release.Namespace }}
+{{- end }}
