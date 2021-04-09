@@ -14,9 +14,7 @@ spec:
   resources:
     requests:
       storage: {{ .Values.db.persistence.size | quote }}
-{{- if .Values.db.persistence.storageClass }}
-  storageClassName: "{{ .Values.db.persistence.storageClass }}"
-{{- end }}
+  storageClassName: {{ .Release.Name }}-storage-class
 ---
 kind: PersistentVolumeClaim
 apiVersion: v1
@@ -33,7 +31,5 @@ spec:
   resources:
     requests:
       storage: {{ .Values.db.persistence.size | quote }}
-{{- if .Values.db.persistence.storageClass }}
-  storageClassName: "{{ .Values.db.persistence.storageClass }}"
-{{- end }}
+  storageClassName: {{ .Release.Name }}-storage-class
 {{- end }}

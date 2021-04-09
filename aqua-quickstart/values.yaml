@@ -135,6 +135,7 @@ db:
   persistence:
     enabled: true
     storageClass:
+      provisioner: kubernetes.io/aws-ebs
     size: 30Gi
     accessMode: ReadWriteOnce
   livenessProbe:
